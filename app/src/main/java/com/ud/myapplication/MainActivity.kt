@@ -30,6 +30,8 @@ class MainActivity : ComponentActivity() {
             SnakesAndLaddersTheme {
                 Navigation()
             }
+
         }
     }
+
 }
