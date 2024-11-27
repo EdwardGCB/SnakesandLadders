@@ -2,10 +2,10 @@ package com.ud.myapplication.persistence
 
 data class Board(
     val id: String = "",
-    val filas: Int = 0,
-    val columnas: Int = 0,
-    val jugadores: List<Player> = emptyList(),
-    val serpientes: Int = 0,
-    val escaleras: Int = 0,
+    val rows: Int = 0,
+    val columns: Int = 0,
+    val players: List<Player> = emptyList(),
+    val snakes: Int = 0,
+    val ladders: Int = 0,
     val state: Boolean = false
 )

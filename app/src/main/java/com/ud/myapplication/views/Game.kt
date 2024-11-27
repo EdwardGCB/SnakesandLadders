@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -79,81 +80,97 @@ fun MainGame(idBoard: String?, navController: NavHostController, viewModel: Game
     if (idBoard == null) {
         navController.navigate(EnumNavigation.LOGIN.toString())
     }
+
+    val id = remember { mutableStateOf(idBoard) }
     val board by viewModel.board.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    idBoard?.let { viewModel.consultarTablero(it) }
 
-    if (board?.state == true) {
+    LaunchedEffect(id) {
+        id.value?.let { viewModel.consultarTablero(it) }
+    }
 
-        val tablero = board?.let { Tablero.iniciarTablero(it) }
-        val players = board?.jugadores ?: listOf()
-
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {  }
-                )
-            },
-        ) { innerPadding ->
+    when {
+        isLoading -> {
             Column(
-                modifier = Modifier.padding(innerPadding)
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                when (players.size) {
-                    2 -> {
-                        Row {
-                            PlayerInfo(players[0], 1)
+                CircularProgressIndicator()
+                Text("Cargando datos del tablero...")
+            }
+        }
+        board?.state == true -> {
+            val tablero = board?.let { Tablero.iniciarTablero(it) }
+            val players = board?.players ?: listOf()
+
+            Scaffold(
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = { Text("Juego en progreso ${players.size}") }
+                    )
+                },
+            ) { innerPadding ->
+                Column(
+                    modifier = Modifier.padding(innerPadding)
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    when (players.size) {
+                        2 -> {
+                            Row {
+                                PlayerInfo(players[0], 1)
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TableroScreen(tablero)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row {
+                                PlayerInfo(players[1], 2)
+                            }
                         }
-                        Spacer(modifier = Modifier.height(20.dp))
-                        TableroScreen(tablero)
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Row {
-                            PlayerInfo(players[1], 2)
+                        3 -> {
+                            Row {
+                                PlayerInfo(players[2], 1)
+                                Spacer(modifier = Modifier.width(50.dp))
+                                PlayerInfo(players[1], 2)
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TableroScreen(tablero)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row {
+                                PlayerInfo(players[0], 1)
+                            }
                         }
-                    }
-                    3 -> {
-                        Row {
-                            PlayerInfo(players[2], 1)
-                            Spacer(modifier = Modifier.width(50.dp))
-                            PlayerInfo(players[1], 2)
-                        }
-                        Spacer(modifier = Modifier.height(20.dp))
-                        TableroScreen(tablero)
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Row {
-                            PlayerInfo(players[0], 1)
-                        }
-                    }
-                    4 -> {
-                        Row {
-                            PlayerInfo(players[3], 1)
-                            Spacer(modifier = Modifier.width(50.dp))
-                            PlayerInfo(players[2], 2)
-                        }
-                        Spacer(modifier = Modifier.height(20.dp))
-                        TableroScreen(tablero)
-                        Spacer(modifier = Modifier.height(20.dp))
-                        Row {
-                            PlayerInfo(players[0], 1)
-                            Spacer(modifier = Modifier.width(50.dp))
-                            PlayerInfo(players[1], 2)
+                        4 -> {
+                            Row {
+                                PlayerInfo(players[3], 1)
+                                Spacer(modifier = Modifier.width(50.dp))
+                                PlayerInfo(players[2], 2)
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TableroScreen(tablero)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row {
+                                PlayerInfo(players[0], 1)
+                                Spacer(modifier = Modifier.width(50.dp))
+                                PlayerInfo(players[1], 2)
+                            }
                         }
                     }
                 }
             }
         }
-
-    } else {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            CircularProgressIndicator()
-            Text("Esperando a que el host inicie el juego...")
+        else -> {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator()
+                Text("Esperando a que el host inicie el juego...")
+            }
         }
     }
 
@@ -167,6 +184,7 @@ fun MainGame(idBoard: String?, navController: NavHostController, viewModel: Game
         }
     }
 }
+
 
 @Composable
     fun TableroScreen(tablero: List<List<Casilla>>?) {
