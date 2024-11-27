@@ -7,12 +7,12 @@ object Tablero {
 
     fun iniciarTablero(board: Board): List<List<Casilla>> {
         idTablero = board.id
-        players1 = board.jugadores.toMutableList()
+        players1 = board.players.toMutableList()
         if (tablero.isEmpty()) {
-            var count = board.filas * board.columnas
-            for (i in board.filas - 1 downTo 0) {
+            var count = board.rows * board.columns
+            for (i in board.rows - 1 downTo 0) {
                 val filasCasillas = mutableListOf<Casilla>()
-                for (j in board.columnas - 1 downTo 0) {
+                for (j in board.columns - 1 downTo 0) {
                     when (count) {
                         // LINE SNAKE
                         3, 5, 22, 43 -> {
