@@ -19,14 +19,19 @@ import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,24 +42,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import com.ud.myapplication.R
+import com.ud.myapplication.persistence.Casilla
+import com.ud.myapplication.persistence.EnumNavigation
 import com.ud.myapplication.persistence.Player
 import com.ud.myapplication.persistence.Tablero
 import kotlin.random.Random
 
-class Game {
-
-
-    @Preview
-    @Composable
-    fun PreviewTableroScreen() {
-        TableroScreen()
-    }
 
     @Preview
     @Composable
     fun PreviewMainGame() {
-        MainGame()
+        //MainGame()
     }
 
     @Preview
@@ -63,11 +64,11 @@ class Game {
         val players = remember {mutableListOf<Player>(
             Player(
                 idPlayer = "1",
-                name = "Edward",
+                correo = "Edward",
             ),
             Player(
                 idPlayer = "2",
-                name = "Robin",
+                correo = "Robin",
             ),
         )}
         PlayerInfo(players[0], 1)
@@ -75,52 +76,93 @@ class Game {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun MainGame(){
-        val players = remember {mutableListOf<Player>(
-            Player(
-                idPlayer = "1",
-                name = "Edward",
-            ),
-            Player(
-                idPlayer = "2",
-                name = "Robin",
-            ),
-        )}
-        Scaffold (
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {  }
-                )
-            },
+    fun MainGame(idBoard: String?, navController: NavHostController, viewModel: GameViewModel= viewModel()) {
+        if(idBoard == null){
+            navController.navigate(EnumNavigation.LOGIN.toString())
+        }
+        val id = remember { mutableStateOf(idBoard) }
+        val board by viewModel.board.collectAsState()
+        val errorMessage by viewModel.errorMessage.collectAsState()
+         LaunchedEffect(id) {
+             id.value?.let { viewModel.consultarTablero(it) }
+         }
+        if(board?.state == true){
 
-            ){innerPadding->
+            val tablero = board?.let { Tablero.iniciarTablero(it) }
+
+            val players = board?.jugadores ?: listOf()
+            Scaffold (
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {  }
+                    )
+                },
+
+                ){innerPadding->
+                Column (
+                    modifier = Modifier.padding(innerPadding)
+                        .fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    when(players.size){
+                        2->{
+                            Row(){
+                                PlayerInfo(players[0], 1)
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TableroScreen(tablero)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row(){
+                                PlayerInfo(players[1], 2)
+                            }
+                        }
+                        3->{
+                            Row(){
+                                PlayerInfo(players[2], 1)
+                                Spacer(modifier = Modifier.width(50.dp))
+                                PlayerInfo(players[1], 2)
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TableroScreen(tablero)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row(){
+                                PlayerInfo(players[0], 1)
+                            }
+                        }
+                        4->{
+                            Row(){
+                                PlayerInfo(players[3], 1)
+                                Spacer(modifier = Modifier.width(50.dp))
+                                PlayerInfo(players[2], 2)
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TableroScreen(tablero)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Row(){
+                                PlayerInfo(players[0], 1)
+                                Spacer(modifier = Modifier.width(50.dp))
+                                PlayerInfo(players[1], 2)
+                            }
+                        }
+                    }
+                }
+
+            }
+        }else{
             Column (
-                modifier = Modifier.padding(innerPadding)
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Row(){
-                    PlayerInfo(players[0], 1)
-                    Spacer(modifier = Modifier.width(50.dp))
-                    PlayerInfo(players[1], 2)
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-                TableroScreen()
-                Spacer(modifier = Modifier.height(20.dp))
-                Row(){
-                    PlayerInfo(players[0], 1)
-                    Spacer(modifier = Modifier.width(50.dp))
-                    PlayerInfo(players[1], 2)
-                }
+                CircularProgressIndicator()
+                Text("Esperando a que el host inicie el juego...")
             }
-
         }
     }
 
     @Composable
-    fun TableroScreen() {
-        val tablero = Tablero.iniciarTablero();
+    fun TableroScreen(tablero: List<List<Casilla>>?) {
         Box(
             modifier = Modifier.width(350.dp)
         ) {
@@ -135,7 +177,7 @@ class Game {
                                     .border(2.dp, Color.DarkGray),
                                 contentAlignment = Alignment.Center
                             ) {
-                                when (tablero[i][j].valor) {
+                                when (tablero!![i][j].valor) {
                                     64 -> Text("Meta")
                                     1 -> Text("Inicio")
                                     else -> Text(tablero[i][j].valor.toString())
@@ -178,7 +220,7 @@ class Game {
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = player.name,
+                            text = player.correo,
                             style = TextStyle(
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.ExtraBold
@@ -216,4 +258,3 @@ class Game {
             )
         }
     }
-}

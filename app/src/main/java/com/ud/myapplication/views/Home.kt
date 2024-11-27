@@ -1,6 +1,10 @@
 package com.ud.myapplication.views
 
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,33 +30,48 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.ud.myapplication.R
-import com.ud.myapplication.persistence.Operaciones
+import com.ud.myapplication.persistence.EnumNavigation
 import com.ud.myapplication.persistence.Player
 
 @Preview
 @Composable
 fun PreviewHomeScreen() {
-    HomeScreen()
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
-    val host =  remember { mutableStateOf("") }
+fun HomeScreen(navController: NavController,viewModel: GameBoardViewModel = viewModel()) {
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+    val host = remember { mutableStateOf("") }
+    val text = remember { mutableStateOf("") }
     val flag = remember { mutableStateOf(false) }
-    Scaffold (
+
+    val players by viewModel.players.collectAsState() // Observamos la lista de jugadores
+    val errorMessage by viewModel.errorMessage.collectAsState() // Observamos los errores
+
+    Scaffold(
         topBar = {
             CenterAlignedTopAppBar(title = {
                 Row {
@@ -76,45 +95,67 @@ fun HomeScreen() {
                 }
             })
         }
-    ){ innerPadding ->
-        Column (
-            modifier = Modifier.padding(innerPadding).fillMaxSize(),
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
-        ){
+        ) {
             Spacer(Modifier.height(20.dp))
 
-            Row (){
+            Row {
                 CardButton("Local", R.drawable.local_icon, onClick = {})
                 Spacer(Modifier.width(40.dp))
-                CardButton("Multijugador", R.drawable.multiplayer_icon, onClick = {flag.value = !flag.value})
+                CardButton(
+                    "Multijugador",
+                    R.drawable.multiplayer_icon,
+                    onClick = {
+                        flag.value = !flag.value
+                        if (flag.value) {
+                            // Crear un nuevo tablero y establecer el host
+                            val boardId = createGameBoard()
+                            host.value = boardId
+                            viewModel.listenToPlayers(boardId) // Escuchar jugadores en tiempo real
+                        } else {
+                            host.value = ""
+                        }
+                    }
+                )
             }
+
             Spacer(Modifier.height(40.dp))
-            if(flag.value){
-                val players = remember {mutableListOf<Player>(
-                    Player(
-                        idPlayer = "1",
-                        name = "Edward",
-                    ),
-                    Player(
-                        idPlayer = "2",
-                        name = "Robin",
-                    ),
-                    Player(
-                        idPlayer = "1",
-                        name = "Edward",
-                    ),
-                    Player(
-                        idPlayer = "2",
-                        name = "Robin",
-                    ),
-                )}
-                CardEvent(players)
-            }else{
+
+            if (flag.value) {
+                // Mostramos el evento con la lista de jugadores
+                CardEvent(
+                    players,
+                    host,
+                    onClick = {
+                        val user = FirebaseAuth.getInstance().currentUser
+                        if (user != null) {
+                            val player = Player( idPlayer = user.uid, correo = user.email ?: "")
+                            viewModel.joinBoard(host.value, player) // Unirse a la sala en firebase
+                            viewModel.updateBoardState(host.value)
+                            navController.navigate("${EnumNavigation.PLAY}/$host")
+                        } else {
+                            navController.navigate(EnumNavigation.LOGIN.toString())
+                        }
+                    }
+                )
+                errorMessage?.let { error ->
+                    Text(
+                        text = error,
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            } else {
                 Text(
                     "-------------- or --------------",
                     fontWeight = FontWeight.Medium,
                     fontSize = 20.sp
-
                 )
                 Spacer(Modifier.height(40.dp))
                 Text(
@@ -123,17 +164,28 @@ fun HomeScreen() {
                     fontSize = 24.sp
                 )
                 Spacer(Modifier.height(20.dp))
-                //Login Field
+
+                // Campo para ingresar el código del tablero (host)
                 OutlinedTextField(
-                    value = host.value,
-                    onValueChange = { host.value = it },
+                    value = text.value,
+                    onValueChange = { text.value = it },
                     label = { Text("Host") },
                 )
                 Spacer(Modifier.height(20.dp))
-                //Button login
+
+                // Botón para unirse a la sala
                 Button(
                     onClick = {
-                        //TODO: Unirse a la sala
+                        if (text.value.isNotEmpty()) {
+                            val user = FirebaseAuth.getInstance().currentUser
+                            if (user != null) {
+                                val player = Player( idPlayer = user.uid, correo = user.email ?: "")
+                                viewModel.joinBoard(text.value, player) // Unirse a la sala
+                                navController.navigate("${EnumNavigation.PLAY}/$host")
+                             } else {
+                                navController.navigate(EnumNavigation.LOGIN.toString())
+                             }
+                        }
                     },
                     modifier = Modifier
                         .padding(10.dp)
@@ -145,6 +197,7 @@ fun HomeScreen() {
         }
     }
 }
+
 
 @Composable
 fun CardButton(title: String, iconRes: Int, onClick: () -> Unit) {
@@ -175,8 +228,8 @@ fun CardButton(title: String, iconRes: Int, onClick: () -> Unit) {
 }
 
 @Composable
-fun CardEvent(players: List<Player>){
-    val link = Operaciones().generateRandomString()
+fun CardEvent(players: List<Player>, host: MutableState<String>, onClick: () -> Unit){
+    val context = LocalContext.current
     Card(
         modifier = Modifier
            .padding(10.dp)
@@ -199,16 +252,19 @@ fun CardEvent(players: List<Player>){
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp
                     )
-                    Spacer(Modifier.width(190.dp))
+                    Spacer(Modifier.width(50.dp))
                     Card(
                         modifier = Modifier
-                            .clickable(onClick = {  }),
+                            .clickable(onClick = { copyToClipBoard(context, host) })
+                            .width(250.dp),
                         shape = RoundedCornerShape(9.dp),
                         elevation = CardDefaults.cardElevation(8.dp)
                     ) {
-                        Row (Modifier.padding(5.dp)){
+                        Row (
+                            Modifier.padding(5.dp)
+                        ){
                             Text(
-                                link,
+                                host.value,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 18.sp
                             )
@@ -238,6 +294,16 @@ fun CardEvent(players: List<Player>){
             items(players) {player->
                 PlayerCard(player)
             }
+            item{
+                Button(
+                    onClick = onClick,
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .width(200.dp)
+                ) {
+                    Text(text = "Empezar partida", fontSize = 18.sp)
+                }
+            }
         }
     }
 }
@@ -261,10 +327,41 @@ fun PlayerCard(player: Player){
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                player.name,
+                player.correo,
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 18.sp
             )
         }
     }
+}
+
+fun createGameBoard(): String{
+    val db = FirebaseFirestore.getInstance()
+    //Generacion del id
+    var boardId = db.collection("gameBoards").document().id
+
+    val gameBoard = hashMapOf(
+        "rows" to 8,
+        "columns" to 8,
+        "players" to arrayListOf<Player>(),
+        "snakes" to 5,
+        "ladders" to 5,
+        "state" to false,
+        "id" to boardId
+    )
+    db.collection("gameBoards").document(boardId)
+        .set(gameBoard)
+        .addOnSuccessListener {
+
+        }.addOnSuccessListener {
+            boardId=""
+        }
+    return boardId
+}
+
+fun copyToClipBoard(context: Context, host: MutableState<String>) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("Copied Text", host.value)
+    clipboard.setPrimaryClip(clip)
+    Toast.makeText(context, "Texto copiado al portapapeles", Toast.LENGTH_SHORT).show()
 }

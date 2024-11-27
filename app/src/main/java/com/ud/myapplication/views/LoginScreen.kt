@@ -83,7 +83,7 @@ fun LoginScreen(navController: NavController) {
                                 val userId = task.result?.user?.uid ?: ""
                                 // Mostrar Toast usando contexto
                                 Toast.makeText(context, "¡Login exitoso!", Toast.LENGTH_SHORT).show()
-                                navController.navigate("${EnumNavigation.HOME}/$userId")
+                                navController.navigate(EnumNavigation.HOME.toString())
                             } else {
                                 // Mostrar Toast con error
                                 Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()

@@ -6,10 +6,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.navigation.toRoute
 import com.ud.myapplication.persistence.EnumNavigation
 import com.ud.myapplication.views.HomeScreen
 import com.ud.myapplication.views.LoginScreen
+import com.ud.myapplication.views.MainGame
 
 @Composable
 fun Navigation(){
@@ -18,12 +18,15 @@ fun Navigation(){
         composable(EnumNavigation.LOGIN.toString()) {
             LoginScreen(navController)
         }
-        composable (
-            route="${EnumNavigation.HOME}/{idPerson}",
-            arguments = listOf(navArgument("idPerson") {type = NavType.StringType})
-            ){
-            val idPerson = it.arguments?.getString("idPerson")
-            HomeScreen()
+        composable (EnumNavigation.HOME.toString()){
+            HomeScreen(navController)
+        }
+        composable(
+            route="${EnumNavigation.PLAY}/{idBoard}",
+            arguments = listOf(navArgument("idBoard") {type = NavType.StringType})
+        ){
+            val idBoard = it.arguments?.getString("idBoard")
+            MainGame(idBoard, navController)
         }
     }
 

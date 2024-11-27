@@ -56,6 +56,7 @@ dependencies {
     implementation (libs.coil.kt.coil.compose)
     // Firebase dependencies
     implementation(platform(libs.firebase.bom))
+    implementation (libs.firebase.firestore)
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.database.ktx)
     debugImplementation(libs.androidx.ui.test.manifest)
