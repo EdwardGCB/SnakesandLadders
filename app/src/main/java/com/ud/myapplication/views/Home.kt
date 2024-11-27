@@ -137,7 +137,7 @@ fun HomeScreen(navController: NavController,viewModel: GameBoardViewModel = view
                             val player = Player( idPlayer = user.uid, correo = user.email ?: "")
                             viewModel.joinBoard(host.value, player) // Unirse a la sala en firebase
                             viewModel.updateBoardState(host.value)
-                            navController.navigate("${EnumNavigation.PLAY}/$host")
+                            navController.navigate("${EnumNavigation.PLAY}/${host.value}")
                         } else {
                             navController.navigate(EnumNavigation.LOGIN.toString())
                         }
@@ -181,7 +181,7 @@ fun HomeScreen(navController: NavController,viewModel: GameBoardViewModel = view
                             if (user != null) {
                                 val player = Player( idPlayer = user.uid, correo = user.email ?: "")
                                 viewModel.joinBoard(text.value, player) // Unirse a la sala
-                                navController.navigate("${EnumNavigation.PLAY}/$host")
+                                navController.navigate("${EnumNavigation.PLAY}/${text.value}")
                              } else {
                                 navController.navigate(EnumNavigation.LOGIN.toString())
                              }
