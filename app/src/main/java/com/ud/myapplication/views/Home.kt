@@ -48,9 +48,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberImagePainter
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.ud.myapplication.R
+import com.ud.myapplication.ViewModel.GameBoardViewModel
 import com.ud.myapplication.persistence.EnumNavigation
+import com.ud.myapplication.persistence.Operaciones
 import com.ud.myapplication.persistence.Player
 
 @Preview
@@ -62,13 +63,11 @@ fun PreviewHomeScreen() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController,viewModel: GameBoardViewModel = viewModel()) {
-    val auth = FirebaseAuth.getInstance()
-    val currentUser = auth.currentUser
     val host = remember { mutableStateOf("") }
     val text = remember { mutableStateOf("") }
     val flag = remember { mutableStateOf(false) }
 
-    val players by viewModel.players.collectAsState() // Observamos la lista de jugadores
+    val players by viewModel.players.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState() // Observamos los errores
 
     Scaffold(
@@ -114,7 +113,7 @@ fun HomeScreen(navController: NavController,viewModel: GameBoardViewModel = view
                         flag.value = !flag.value
                         if (flag.value) {
                             // Crear un nuevo tablero y establecer el host
-                            val boardId = createGameBoard()
+                            val boardId = viewModel.createGameBoard()
                             host.value = boardId
                             viewModel.listenToPlayers(boardId) // Escuchar jugadores en tiempo real
                         } else {
@@ -134,9 +133,14 @@ fun HomeScreen(navController: NavController,viewModel: GameBoardViewModel = view
                     onClick = {
                         val user = FirebaseAuth.getInstance().currentUser
                         if (user != null) {
-                            val player = Player( idPlayer = user.uid, correo = user.email ?: "")
+                            val player = Player(
+                                idPlayer = user.uid,
+                                correo = user.email ?: "",
+                                1,
+                                Operaciones().generateRandomColor(),
+                                1)
                             viewModel.joinBoard(host.value, player) // Unirse a la sala en firebase
-                            viewModel.updateBoardState(host.value)
+                            viewModel.updateBoardState(host.value, 8, 8)
                             navController.navigate("${EnumNavigation.PLAY}/${host.value}")
                         } else {
                             navController.navigate(EnumNavigation.LOGIN.toString())
@@ -179,7 +183,12 @@ fun HomeScreen(navController: NavController,viewModel: GameBoardViewModel = view
                         if (text.value.isNotEmpty()) {
                             val user = FirebaseAuth.getInstance().currentUser
                             if (user != null) {
-                                val player = Player( idPlayer = user.uid, correo = user.email ?: "")
+                                val player = Player(
+                                    idPlayer = user.uid,
+                                    correo = user.email ?: "",
+                                    1,
+                                    Operaciones().generateRandomColor(),
+                                    1)
                                 viewModel.joinBoard(text.value, player) // Unirse a la sala
                                 navController.navigate("${EnumNavigation.PLAY}/${text.value}")
                              } else {
@@ -333,30 +342,6 @@ fun PlayerCard(player: Player){
             )
         }
     }
-}
-
-fun createGameBoard(): String{
-    val db = FirebaseFirestore.getInstance()
-    //Generacion del id
-    var boardId = db.collection("gameBoards").document().id
-
-    val gameBoard = hashMapOf(
-        "rows" to 8,
-        "columns" to 8,
-        "players" to arrayListOf<Player>(),
-        "snakes" to 5,
-        "ladders" to 5,
-        "state" to false,
-        "id" to boardId
-    )
-    db.collection("gameBoards").document(boardId)
-        .set(gameBoard)
-        .addOnSuccessListener {
-
-        }.addOnSuccessListener {
-            boardId=""
-        }
-    return boardId
 }
 
 fun copyToClipBoard(context: Context, host: MutableState<String>) {

@@ -17,7 +17,6 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.ud.myapplication.navigation.Home
 import com.ud.myapplication.persistence.EnumNavigation
 
 @Preview

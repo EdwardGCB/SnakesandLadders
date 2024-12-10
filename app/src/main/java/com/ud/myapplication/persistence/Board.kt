@@ -5,7 +5,8 @@ data class Board(
     val rows: Int = 0,
     val columns: Int = 0,
     val players: List<Player> = emptyList(),
-    val snakes: Int = 0,
-    val ladders: Int = 0,
-    val state: Boolean = false
+    val snakes: List<Snake> = emptyList(),
+    val ladders: List<Ladder> = emptyList(),
+    val state: Boolean = false,
+    val turn: Int =1
 )
